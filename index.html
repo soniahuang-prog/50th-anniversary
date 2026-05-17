@@ -726,30 +726,116 @@ function renderAdminExcel(main){
     </div>
   </div>`;
 }
-function importExcel(e){
-  const file=e.target.files[0];if(!file)return;e.target.value='';
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const wb=XLSX.read(ev.target.result,{type:'binary'});
-      const sheetName=wb.SheetNames.includes('50週年禮品清單')?'50週年禮品清單':wb.SheetNames[0];
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:''});
-      if(!rows.length){alert(`工作表「${sheetName}」內找不到資料`);return;}
-      const imported=rows.map(rowToGift).filter(g=>g.name);
-      if(!imported.length){alert('解析後無有效禮品（禮品名稱欄位為空）');return;}
-      gifts=imported;alert(`✅ 從「${sheetName}」成功匯入 ${gifts.length} 筆！`);
-      showAdminSection('gifts',document.querySelectorAll('.admin-nav-item')[2]);
-    }catch(err){alert('匯入失敗：'+err.message);console.error(err);}
-  };
-  reader.readAsBinaryString(file);
+function importExcel(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const wb = XLSX.read(ev.target.result, { type: 'binary' });
+            const sheetName = wb.SheetNames.includes('50週年禮品清單') ? '50週年禮品清單' : wb.SheetNames[0];
+            
+            // 🌟 核心防禦 1：強制在解析時將所有格子當作文字讀取（raw: false），徹底避免 Excel 數字型態衝突
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', raw: false });
+            
+            if (!rows.length) {
+                alert(`工作表「${sheetName}」內找不到資料！`);
+                return;
+            }
+            
+            const imported = rows.map(row => {
+                // 🌟 核心防禦 2：幫 row 裡面的每個欄位做雙重字串防護，確保隨後執行的 rowToGift 安全無虞
+                const safeRow = {};
+                for (let key in row) {
+                    safeRow[key] = row[key] !== undefined && row[key] !== null ? String(row[key]) : '';
+                }
+
+                const g = rowToGift(safeRow);
+                
+                // 🌟 核心修復 3：把 Excel 裡的圖片網址（文字）精準轉回網頁需要的陣列（Array）格式
+                if (g && typeof g.images === 'string') {
+                    g.images = g.images.split(/[\n,]+/).map(url => url.trim()).filter(url => url);
+                }
+                return g;
+            }).filter(g => g && g.name);
+            
+            if (!imported.length) {
+                alert('解析後無有效禮品（禮品名稱欄位為空）');
+                return;
+            }
+            
+            // 同步注入全域，打通 Scope 盲區
+            gifts = imported; 
+            window.gifts = imported;
+            
+            alert(`✅ 從「${sheetName}」成功匯入 ${gifts.length} 筆！`);
+            showAdminSection('gifts', document.querySelectorAll('.admin-nav-item')[2]);
+            
+            if (typeof renderGifts === 'function') renderGifts();
+            if (typeof renderAll === 'function') renderAll();
+            
+        } catch (err) {
+            alert('匯入失敗：' + err.message);
+            console.error(err);
+        }
+    };
+    reader.readAsBinaryString(file);
 }
-function exportExcel(){
-  const keys=['id','cat','name','desc','desc2','budget','lead_time','images','emoji'];
-  const data=gifts.map(g=>{const row={};keys.forEach(k=>{row[EXPORT_HEADERS[k]]=g[k]||'';});return row;});
-  const ws=XLSX.utils.json_to_sheet(data);
-  ws['!cols']=keys.map(k=>({wch:Math.max(EXPORT_HEADERS[k].length*2,12)}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,'50週年禮品清單',ws);
-  XLSX.writeFile(wb,'50th_Anniversary_Gifts.xlsx');
+
+function exportExcel() {
+    try {
+        let sourceGifts = null;
+        
+        if (typeof gifts !== 'undefined' && gifts && gifts.length > 0) {
+            sourceGifts = gifts;
+        } else if (window.gifts && window.gifts.length > 0) {
+            sourceGifts = window.gifts;
+        } else if (typeof giftData !== 'undefined' && giftData && giftData.length > 0) {
+            sourceGifts = giftData;
+        } else if (window.giftData && window.giftData.length > 0) {
+            sourceGifts = window.giftData;
+        }
+
+        if (!sourceGifts || sourceGifts.length === 0) {
+            const cards = document.querySelectorAll('.gift-card, .admin-table tbody tr');
+            if (cards.length > 0 && typeof currentGifts !== 'undefined') {
+                sourceGifts = currentGifts;
+            }
+        }
+
+        if (!sourceGifts || sourceGifts.length === 0) {
+            alert("目前系統口袋尚未載入商品，請在後台任意商品點擊「編輯 ＞ 儲存」，激活記憶體後即可順利匯出！");
+            return;
+        }
+
+        const keys = ['id','cat','name','desc','desc2','budget','lead_time','images','emoji'];
+        const cleanData = sourceGifts.map(g => {
+            const row = {};
+            keys.forEach(k => {
+                let val = g[k];
+                if (k === 'images' && Array.isArray(val)) {
+                    val = val.join(', ');
+                }
+                row[EXPORT_HEADERS[k]] = val !== undefined && val !== null ? String(val) : '';
+            });
+            return row;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(cleanData);
+        ws['!cols'] = keys.map(k => ({ wch: Math.max(EXPORT_HEADERS[k].length * 2, 12) }));
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '50週年禮品清單');
+
+        XLSX.writeFile(wb, '50th_Anniversary_Gifts.xlsx');
+        console.log("✨ 顧問夥伴提示：Excel 匯出成功！");
+
+    } catch (error) {
+        console.error("匯出失敗詳細原因：", error);
+        alert("匯出時發生小碎石，請打開 Console 查看原因！");
+    }
 }
 
 /* ══ INIT ══ */
