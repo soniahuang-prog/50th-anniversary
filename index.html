@@ -798,8 +798,9 @@ function importExcel(e) {
                 return;
             }
             
-            window.gifts = imported;
-            alert(`✅ 從「${sheetName}」成功匯入 ${window.gifts.length} 筆！`);
+            // 正式同步注入全域變數 gifts
+            gifts = imported; 
+            alert(`✅ 從「${sheetName}」成功匯入 ${gifts.length} 筆！`);
             showAdminSection('gifts', document.querySelectorAll('.admin-nav-item')[2]);
             
             if (typeof renderGifts === 'function') renderGifts();
@@ -815,13 +816,13 @@ function importExcel(e) {
 
 function exportExcel() {
     try {
-        if (!window.gifts || window.gifts.length === 0) {
+        if (!gifts || gifts.length === 0) {
             alert("目前沒有商品資料可以匯出喔！");
             return;
         }
 
         const keys = ['id','cat','name','desc','desc2','budget','lead_time','images','emoji'];
-        const cleanData = window.gifts.map(g => {
+        const cleanData = gifts.map(g => {
             const row = {};
             keys.forEach(k => {
                 let val = g[k];
