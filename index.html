@@ -368,51 +368,98 @@ footer{border-top:1px solid var(--border);padding:1.6rem;text-align:center;color
 </div>
 
 <script>
+/* ══ 雲端資料庫設定 ══ */
+// 🌟 核心關鍵：請把你剛剛在 Google 試算表點「發布到網路」拿到的那串 .csv 網址，貼在下方雙引號內！
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1Us64w6id80ZjHArl4zlTvVQ0I9_B2AzDMxN33T9kOPI/edit?usp=sharing";
+
 /* ══ DATA ══ */
+// 緩衝備份資料：如果哪天 Google 伺服器斷線，網頁會自動讀取這裡，確保畫面絕對不會一片空白
 const INITIAL_GIFTS=[
-  {id:"G001",cat:"A",name:"PORTER 機能後背包",
-   desc:"每天背的包包也要跟著換代升級！高密度尼龍質感好到不行，騎車通勤、跨部門提案、週末放風都能讓你整個人俐落起來。",
-   desc2:"硬挺俐落包身站立不軟爛；多層次防震筆電艙；人體工學透氣背帶——三位一體，通勤出差輕鬆應付。",
-   budget:"NT$ 6,650",lead_time:"約6個月",emoji:"🎒",images:""},
-  {id:"G002",cat:"A",name:"PORTER 輕便托特包",
-   desc:"輕量俐落、收納到位。下班約會、週末放風、不用帶筆電時的百搭隨身包。",
-   desc2:"手提斜背兩用切換零秒；PORTER 經典多口袋讓隨身物品各有歸位；防潑水布料車線扎實耐操。",
-   budget:"NT$ 3,450 - NT$ 4,250",lead_time:"約6個月",emoji:"👜",images:""},
-  {id:"G003",cat:"A",name:"OSIM 護眼樂 Air 2",
-   desc:"精準氣壓穴位按摩與溫熱舒緩，附帶輕柔音樂，辦公室爆肝午休、居家放鬆的護眼必備神器。",
-   desc2:"38-42°C 恆溫熱敷促進眼周循環；輕巧可 180° 折疊，隨身攜帶；高級親膚皮革易擦拭。",
-   budget:"NT$ 2,880",lead_time:"常備現貨，50週年限定包裝，交期約 14-20 天。",emoji:"👁️",images:""},
-  {id:"G004",cat:"B",name:"Mont-bell Alpine 輕量高機能保溫瓶 0.5L",
-   desc:"登山界盛讚的神級保溫。極輕量、防滑耐摔，無論冷氣房辦公還是週末露營，都給你最持久的完美溫度。",
-   desc2:"超薄雙層真空不鏽鋼＋銅箔反射層；比同規格輕近三分之一；防滑矽膠圈戴手套也能輕鬆旋開。",
-   budget:"NT$ 1,480",lead_time:"常備現貨，50週年專屬雷雕限定包裝，交期約 20-30 天。",emoji:"🏔️",images:""},
-  {id:"G005",cat:"B",name:"Owala FreeSip 聰明兩用保溫瓶 24oz",
-   desc:"社群爆紅款！獨家二合一飲口：想大口喝、想吸管喝一瓶搞定，健身房到辦公室最聰明的補水好隊友。",
-   desc2:"專利直飲口＋內建吸管飲口，無需換蓋；彈蓋按鈕安全鎖把手防漏；耐磨烤漆不易刮傷。",
-   budget:"NT$ 1,180",lead_time:"常備現貨，50週年限定雷雕吉何鷹，交期約 20-30 天。",emoji:"🥤",images:""},
-  {id:"G006",cat:"B",name:"傳承半世紀：50週年時光記憶限定相片書",
-   desc:"翻開這本，不只看見公司的 50 年，更看見一路上天天和我們並肩作戰的自己。",
-   desc2:"以「人」為核心的青春故事集；進口美術紙精裝硬殼燙金書背；附贈「Aim High, Fly High」限定霧面書套。",
-   budget:"NT$ 850 - NT$ 1,200",lead_time:"各部門歷史照片募集、排版後送印，交期約 45-60 天。",emoji:"📖",images:""},
-  {id:"G007",cat:"C",name:"2026台灣茶旅鐵盒餅乾",
-   desc:"用十多種台灣在地茶葉做的餅乾，吃得到純正茶香與造型創意。",
-   desc2:"嚴選阿里山高山茶、紅玉、擂茶；大盒限定護國神山造型；法國奶油＋日本麵粉，無防腐劑。",
-   budget:"NT$ 450 - NT$ 880",lead_time:"採預約製作，請選擇大/小盒後挑選出貨日期。",emoji:"🍵",images:""},
-  {id:"G008",cat:"C",name:"GODIVA松露巧克力小貨車鐵盒",
-   desc:"用復古可愛的粉色鐵車，載滿滑順濃郁的松露巧克力。巧克力吃完後，鐵盒還能當日常收納小盒。",
-   desc2:"經典粉紅小貨車鐵盒；內含10顆 G Cube 松露巧克力；車牌可客製50週年限定識別。",
-   budget:"NT$ 850（內含10顆裝）",lead_time:"待確認",emoji:"🚚",images:""},
-  {id:"G009",cat:"C",name:"50週年限定：客製化手沖濾掛咖啡禮盒",
-   desc:"陪伴公司走過半個世紀，我們把最真誠的感謝，化作一杯溫熱的手沖咖啡，送給最珍貴的你。",
-   desc2:"外盒與濾掛袋皆可融入50週年視覺；在地職人接單新鮮烘焙充氮包裝；一熱水幾分鐘即享好咖啡。",
-   budget:"NT$ 450 - NT$ 650",lead_time:"確認設計與豆種後約 21-30 個工作天，建議提早 1.5 個月下單。",emoji:"☕",images:""}
+  {id:"G001",cat:"A",name:"PORTER 機能後背包",desc:"每天背的包包也要跟著換代升級！",desc2:"硬挺俐落包身站立不軟爛",budget:"NT$ 6,650",lead_time:"約6個月",emoji:"🎒",images:[]},
+  {id:"G002",cat:"A",name:"PORTER 輕便托特包",desc:"輕量俐落、收納到位。",desc2:"手提斜背兩用切換零秒",budget:"NT$ 3,450",lead_time:"約6個月",emoji:"👜",images:[]}
 ];
 
-let gifts=JSON.parse(JSON.stringify(INITIAL_GIFTS));
+let gifts = [];
 let catNames={A:"同仁專屬禮",B:"感謝同行禮",C:"里程共榮禮"};
 let siteSettings={title:"Aim High, Fly High",subtitle:"50週年 禮品提案選品庫",logoUrl:"",mascotUrl:""};
 let logoClicks=0,logoTimer=null,editingId=null,savedScrollY=0;
 let coverImgs=[],coverIdx=0;
+
+// 🌟 雲端 CSV 解析大腦：自動對齊你的 Google 試算表欄位，並防禦任何 Excel 數字型態衝突
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/);
+    if (lines.length <= 1) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const keyMap = {
+        '商品ID': 'id', '分類': 'cat', '商品名稱': 'name', 
+        '規格描述1': 'desc', '規格描述2': 'desc2',
+        '預算': 'budget', '交期': 'lead_time', '圖片網址': 'images', '圖示': 'emoji'
+    };
+
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        let rowData = [];
+        // 強大防禦：處理 CSV 文字中的逗號與引號，避免網址被切斷
+        let matches = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+        rowData = matches.map(v => v.trim().replace(/^"|"$/g, ''));
+
+        let g = {};
+        headers.forEach((h, index) => {
+            const engKey = keyMap[h];
+            if (engKey) {
+                let val = rowData[index] || '';
+                if (engKey === 'images') {
+                    // 自動把試算表裡的圖片網址，用分行、逗號或分號切回網頁看得懂的輪播陣列
+                    g[engKey] = val ? val.split(/[\n,;]+/).map(u => u.trim()).filter(u => u) : [];
+                } else {
+                    g[engKey] = String(val); // 強制安全轉成純文字，杜絕 trim() 報錯
+                }
+            }
+        });
+        if (g.name) result.push(g);
+    }
+    return result;
+}
+
+/* ══ INIT ══ */
+// 🌟 升級版總啟動開關：每次任何人打開網頁，自動連線 Google 試算表抓取最新資料
+async function renderAll() {
+    console.log("✨ 顧問夥伴提示：正在隔空抓取 Google 試算表雲端資料庫...");
+    try {
+        const response = await fetch(GOOGLE_SHEET_CSV_URL);
+        if (!response.ok) throw new Error("網路連線異常");
+        const csvText = await response.text();
+        
+        const cloudGifts = parseCSV(csvText);
+        if (cloudGifts && cloudGifts.length > 0) {
+            gifts = cloudGifts;
+            window.gifts = cloudGifts;
+            console.log(`✅ 成功同步雲端試算表 ${gifts.length} 筆資料！`);
+        }
+    } catch (error) {
+        console.error("❌ 讀取雲端資料庫失敗，採用本地緩衝：", error);
+        if(!gifts || gifts.length === 0) {
+            gifts = JSON.parse(JSON.stringify(INITIAL_GIFTS));
+            window.gifts = gifts;
+        }
+    }
+
+    // 呼叫前台原本精美絢麗的畫面渲染功能
+    currentCat = '全部';
+    currentBudget = '全部';
+    
+    const navs = document.querySelectorAll('.nav-item');
+    if(navs.length > 0) {
+        navs.forEach(n => n.classList.remove('active'));
+        navs[0].classList.add('active');
+    }
+    
+    if (typeof renderGifts === 'function') renderGifts();
+    if (typeof updateSummary === 'function') updateSummary();
+}
 
 /* ══ CANVAS ══ */
 (function(){
