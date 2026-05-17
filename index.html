@@ -478,7 +478,10 @@ function renderGifts(){
 
 /* ══ COVER ══ */
 function parseImgs(raw){
-  if(!raw||!raw.trim())return[];
+  if(!raw)return[];
+  if(Array.isArray(raw))return raw.map(s=>String(s).trim()).filter(Boolean);
+  if(typeof raw!=='string')raw=String(raw);
+  if(!raw.trim())return[];
   return raw.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean);
 }
 function openCover(id){
