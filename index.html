@@ -768,30 +768,84 @@ function renderAdminExcel(main){
     </div>
   </div>`;
 }
-function importExcel(e){
-  const file=e.target.files[0];if(!file)return;e.target.value='';
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    try{
-      const wb=XLSX.read(ev.target.result,{type:'binary'});
-      const sheetName=wb.SheetNames.includes('50週年禮品清單')?'50週年禮品清單':wb.SheetNames[0];
-      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:''});
-      if(!rows.length){alert(`工作表「${sheetName}」內找不到資料`);return;}
-      const imported=rows.map(rowToGift).filter(g=>g.name);
-      if(!imported.length){alert('解析後無有效禮品（禮品名稱欄位為空）');return;}
-      gifts=imported;alert(`✅ 從「${sheetName}」成功匯入 ${gifts.length} 筆！`);
-      showAdminSection('gifts',document.querySelectorAll('.admin-nav-item')[2]);
-    }catch(err){alert('匯入失敗：'+err.message);console.error(err);}
-  };
-  reader.readAsBinaryString(file);
+function importExcel(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const wb = XLSX.read(ev.target.result, { type: 'binary' });
+            const sheetName = wb.SheetNames.includes('50週年禮品清單') ? '50週年禮品清單' : wb.SheetNames[0];
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+            
+            if (!rows.length) {
+                alert(`工作表「${sheetName}」內找不到資料！`);
+                return;
+            }
+            
+            const imported = rows.map(row => {
+                const g = rowToGift(row);
+                if (g && typeof g.images === 'string') {
+                    g.images = g.images.split(/[\n,]+/).map(url => url.trim()).filter(url => url);
+                }
+                return g;
+            }).filter(g => g && g.name);
+            
+            if (!imported.length) {
+                alert('解析後無有效禮品（禮品名稱欄位為空）');
+                return;
+            }
+            
+            window.gifts = imported;
+            alert(`✅ 從「${sheetName}」成功匯入 ${window.gifts.length} 筆！`);
+            showAdminSection('gifts', document.querySelectorAll('.admin-nav-item')[2]);
+            
+            if (typeof renderGifts === 'function') renderGifts();
+            if (typeof renderAll === 'function') renderAll();
+            
+        } catch (err) {
+            alert('匯入失敗：' + err.message);
+            console.error(err);
+        }
+    };
+    reader.readAsBinaryString(file);
 }
-function exportExcel(){
-  const keys=['id','cat','name','desc','desc2','budget','lead_time','images','emoji'];
-  const data=gifts.map(g=>{const row={};keys.forEach(k=>{row[EXPORT_HEADERS[k]]=g[k]||'';});return row;});
-  const ws=XLSX.utils.json_to_sheet(data);
-  ws['!cols']=keys.map(k=>({wch:Math.max(EXPORT_HEADERS[k].length*2,12)}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,'50週年禮品清單',ws);
-  XLSX.writeFile(wb,'50th_Anniversary_Gifts.xlsx');
+
+function exportExcel() {
+    try {
+        if (!window.gifts || window.gifts.length === 0) {
+            alert("目前沒有商品資料可以匯出喔！");
+            return;
+        }
+
+        const keys = ['id','cat','name','desc','desc2','budget','lead_time','images','emoji'];
+        const cleanData = window.gifts.map(g => {
+            const row = {};
+            keys.forEach(k => {
+                let val = g[k];
+                if (k === 'images' && Array.isArray(val)) {
+                    val = val.join(', ');
+                }
+                row[EXPORT_HEADERS[k]] = val !== undefined && val !== null ? String(val) : '';
+            });
+            return row;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(cleanData);
+        ws['!cols'] = keys.map(k => ({ wch: Math.max(EXPORT_HEADERS[k].length * 2, 12) }));
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '50週年禮品清單');
+
+        XLSX.writeFile(wb, '50th_Anniversary_Gifts.xlsx');
+        console.log("✨ 顧問夥伴提示：Excel 匯出成功！");
+
+    } catch (error) {
+        console.error("匯出失敗詳細原因：", error);
+        alert("匯出時發生小碎石，請打開 Console 查看原因！");
+    }
 }
 
 /* ══ INIT ══ */
