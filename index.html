@@ -737,7 +737,7 @@ function importExcel(e) {
             const wb = XLSX.read(ev.target.result, { type: 'binary' });
             const sheetName = wb.SheetNames.includes('50週年禮品清單') ? '50週年禮品清單' : wb.SheetNames[0];
             
-            // 🌟 核心防禦 1：強制在解析時將所有格子當作文字讀取（raw: false），徹底避免 Excel 數字型態衝突
+            // 🌟 核心防禦 1：強制將所有格子當作文字讀取（raw: false），徹底避免 Excel 數字型態衝突
             const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '', raw: false });
             
             if (!rows.length) {
@@ -811,6 +811,13 @@ function exportExcel() {
         }
 
         const keys = ['id','cat','name','desc','desc2','budget','lead_time','images','emoji'];
+        
+        // 🌟 【超級修正線】確保 EXPORT_HEADERS 存在，並防禦性安全查表，絕對不再噴發 is not a function 錯誤！
+        const headersMap = (typeof EXPORT_HEADERS !== 'undefined' && EXPORT_HEADERS) ? EXPORT_HEADERS : {
+            id: '商品ID', cat: '分類', name: '商品名稱', desc: '規格描述1', desc2: '規格描述2',
+            budget: '預算', lead_time: '交期', images: '圖片網址', emoji: '圖示'
+        };
+
         const cleanData = sourceGifts.map(g => {
             const row = {};
             keys.forEach(k => {
@@ -818,13 +825,19 @@ function exportExcel() {
                 if (k === 'images' && Array.isArray(val)) {
                     val = val.join(', ');
                 }
-                row[EXPORT_HEADERS[k]] = val !== undefined && val !== null ? String(val) : '';
+                const chineseHeader = headersMap[k] || k;
+                row[chineseHeader] = val !== undefined && val !== null ? String(val) : '';
             });
             return row;
         });
 
         const ws = XLSX.utils.json_to_sheet(cleanData);
-        ws['!cols'] = keys.map(k => ({ wch: Math.max(EXPORT_HEADERS[k].length * 2, 12) }));
+        
+        // 安全設定欄寬
+        ws['!cols'] = keys.map(k => {
+            const headerText = headersMap[k] || k;
+            return { wch: Math.max(headerText.length * 2, 12) };
+        });
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, '50週年禮品清單');
